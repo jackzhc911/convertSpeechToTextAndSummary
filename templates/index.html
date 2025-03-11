@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .upload-area.dragover {
+            border-color: #000;
+        }
+        .loader-container {
+            /* display: none;  This is no longer needed because it's inline now */
+            position: fixed; /* Fixed position to overlay content */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            z-index: 1000; /* Ensure it's on top */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loader {
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload a File</h1>
+    <div class="upload-area" id="upload-area">
+        Drag and drop a file here or click to select a file
+    </div>
+    <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data" style="display: none;">
+        <input type="file" name="file" id="file-input">
+    </form>
+    <form id="result-form" action="/result" method="post" style="display: none;">
+        <input type="hidden" name="transcription_file" id="transcription-file">
+        <input type="hidden" name="summary_file" id="summary-file">
+    </form>
+    <button id="upload-button" style="display: none;">Upload</button>
+    <p id="file-name"></p>
+    <div class="loader-container" id="loader-container" style="display: none;">
+      <div class="loader"></div>
+    </div>
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadForm = document.getElementById('upload-form');
+        const resultForm = document.getElementById('result-form');
+        const uploadButton = document.getElementById('upload-button');
+        const fileName = document.getElementById('file-name');
+        const transcriptionFileInput = document.getElementById('transcription-file');
+        const summaryFileInput = document.getElementById('summary-file');
+        const loaderContainer = document.getElementById('loader-container');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            fileName.textContent = fileInput.files[0].name;
+            uploadButton.style.display = 'block';
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            fileName.textContent = fileInput.files[0].name;
+            uploadButton.style.display = 'block';
+        });
+
+        uploadButton.addEventListener('click', () => {
+            uploadButton.style.display = 'none';
+            loaderContainer.style.display = 'flex';//show the loader
+            const formData = new FormData(uploadForm);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+
+            xhr.addEventListener('load', () => {
+                loaderContainer.style.display = 'none';//hide the loader
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    transcriptionFileInput.value = response.transcription_file;
+                    summaryFileInput.value = response.summary_file;
+                    resultForm.submit();
+                } else {
+                    alert('Failed to upload file');
+                }
+            });
+
+            xhr.send(formData);
+        });
+    </script>
+</body>
+</html>
